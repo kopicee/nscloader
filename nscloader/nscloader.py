@@ -39,12 +39,14 @@ conv2 = Conversation(*convos['conf_2501_2501'])
 # ordered according to their starting timestamps (xmin). The file containing the
 # interval is yielded together with the interval.
 
-for file, iv in conv.linearize():
+for iv in conv.linearize():
     # Print out intervals containing discourse particles, bracketed as []
     discourse_particle = Tag.DD
     for t in iv.tokens:
-        if t.tag == discourse_particle:
-            print(f'{file}  {iv.xmin:>.03f}  {t.content.upper():<4} {iv.text}')
+        if t.tag != discourse_particle:
+            continue
+        particle = t.text.upper()
+        print(f'{iv.textgrid}  {iv.xmin:>.03f}  {particle:<4} {iv.text}')
 """
 
 
@@ -332,11 +334,25 @@ class CorpusLoader:
 
 class Conversation:
     """Loads and parses conversational data"""
-    def __init__(self, wav1, textgrid1, wav2, textgrid2):
+    def __init__(self, wav1, textgrid1, wav2, textgrid2, key=None):
         self.textgrid1 = textgrid1
         self.wav1 = wav1
         self.textgrid2 = textgrid2
         self.wav2 = wav2
+        self.key = key
+
+
+    @property
+    def files(self):
+        return self.textgrid1, self.wav1, self.textgrid2, self.wav2
+
+
+    @property
+    def name(self):
+        name = self.key
+        if not name:
+            name = ', '.join(map(os.path.basename, self.files))
+        return name
 
 
     @classmethod
@@ -366,30 +382,27 @@ class Conversation:
         basename = os.path.basename(filepath)
 
         for ivtext, *_ in repatt.findall(rawtext):
-            yield Interval.from_text(ivtext)
+            yield Interval.from_text(ivtext, textgrid=filepath)
         yield False
 
 
     def linearize(self):
         """Yield Intervals from the 2 TextGrids in chronological order"""
-        tg1 = self.textgrid1
-        tg2 = self.textgrid2
-        gen1 = self.generate_intervals(tg1)
-        gen2 = self.generate_intervals(tg2)
+        gen1 = self.generate_intervals(self.textgrid1)
+        gen2 = self.generate_intervals(self.textgrid2)
 
         iv1, iv2 = gen1.__next__(), gen2.__next__()
 
         while True:
             if iv1 == iv2 == False:
-                print('halt')
                 raise StopIteration
 
             if iv1 and iv2:
                 if iv1.xmin <= iv2.xmin:
-                    yield tg1, iv1
+                    yield iv1
                     iv1 = gen1.__next__()
                 else:
-                    yield tg2, iv2
+                    yield iv2
                     iv2 = gen2.__next__()
                 continue
 
@@ -397,11 +410,15 @@ class Conversation:
 
         # Either gen1 or gen2 depleted
         gen = gen1 if iv1 else gen2
-        tg = tg1 if iv1 else tg2
+        iv = iv1 or iv2
 
         # Yield the non-false item, then deplete its generator
-        yield tg, (iv1 or iv2)
+        while iv:
+            yield iv
+            iv = gen.__next__()
 
-        for iv in gen:
-            yield tg, iv
-            raise StopIteration
+        raise StopIteration
+
+
+    def __repr__(self):
+        return f'<Conversation: {self.name}>'
