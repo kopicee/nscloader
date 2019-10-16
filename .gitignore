@@ -1,1 +1,5 @@
 */__pycache__/*
+
+
+; Ignore my other Python scripts using this module
+*.py
