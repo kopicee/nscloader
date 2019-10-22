@@ -36,8 +36,7 @@ conv = Conversation(wav1, tg1, wav2, tg2)
 conv2 = Conversation(*convos['conf_2501_2501'])
 
 # The linearize() method will yield intervals from each file in the conversation
-# ordered according to their starting timestamps (xmin). The file containing the
-# interval is yielded together with the interval.
+# ordered according to their starting timestamps (xmin).
 
 for iv in conv.linearize():
     # Print out intervals containing discourse particles, bracketed as []

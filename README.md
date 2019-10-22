@@ -51,15 +51,16 @@ conv = Conversation(wav1, tg1, wav2, tg2)
 conv2 = Conversation(*convos['conf_2501_2501'])
 
 # The linearize() method will yield intervals from each file in the conversation
-# ordered according to their starting timestamps (xmin). The file containing the
-# interval is yielded together with the interval.
+# ordered according to their starting timestamps (xmin).
 
-for file, iv in conv.linearize():
+for iv in conv.linearize():
     # Print out intervals containing discourse particles, bracketed as []
     discourse_particle = Tag.DD
     for t in iv.tokens:
-        if t.tag == discourse_particle:
-            print(f'{file}  {iv.xmin:>.03f}  {t.content.upper():<4} {iv.text}')
+        if t.tag != discourse_particle:
+            continue
+        particle = t.text.upper()
+        print(f'{iv.textgrid}  {iv.xmin:>.03f}  {particle:<4} {iv.text}')
 ```
 
 [1]: https://www2.imda.gov.sg/NationalSpeechCorpus
